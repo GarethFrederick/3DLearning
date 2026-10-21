@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Model checkpoints, generated data, run outputs and the second domain live
+# outside the repo. The scripts create results/ when they run.
+Utils/Models/
+Utils/Gen_Data/
+Utils/Results/
+gate_out/
+results/
+second_domain/
+golden_runs/
+*.pth
+*.pt
+*.npy
+
+# Scheduler and run logs
+slurm-*.out
+*.log
+
+# LaTeX build files
+*.aux
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Editor and tool settings
+.claude/
+.vscode/
+.idea/
+graphify-out/
