@@ -150,12 +150,9 @@ def f2_mechanism():
         ax.set_xlabel('hour of day')
         ax.set_title(title)
         ax.yaxis.grid(True, zorder=0)
-    axes[0].set_ylabel('share of test days (%)')
+    axes[0].set_ylabel('share of test windows (%)')
     h, l = axes[0].get_legend_handles_labels()
     fig.legend(h, l, loc="lower center", ncol=3, fontsize=8, bbox_to_anchor=(0.5, -0.07))
-    fig.suptitle('Where each model expects the cheapest hours of the day, against where '
-                 'they fall (wide output range; vertical lines mark each centre)', y=1.02,
-                 fontsize=9.5)
     save(fig, 'F2_mechanism')
 
 
@@ -315,13 +312,13 @@ def f5_random_aim():
         xs = sorted(per_block)
         ys = [float(np.mean(per_block[b])) for b in xs]
         ax.plot(xs, ys, 'o', ms=8, mfc='white', mec=C1, mew=1.8, zorder=4,
-                label='discount aimed at this block')
+                label='discount centred on this block')
         # The min-max bar lets a single-run block be read against the seed spread.
         ax.plot([3, 3], [rmin, rmax], color=C2, lw=1.4, zorder=3)
         ax.plot([2.9, 3.1], [rmin, rmin], color=C2, lw=1.4, zorder=3)
         ax.plot([2.9, 3.1], [rmax, rmax], color=C2, lw=1.4, zorder=3)
         ax.plot([3], [rule], 's', ms=8, color=C2, zorder=4,
-                label=f'trend rule (its own block): mean and range of {len(_rv)} runs')
+                label=f'trend rule: mean and range over {len(_rv)} seeds')
         ax.annotate(f'{rule:.3f}', (3, rule), textcoords='offset points', xytext=(9, 0),
                     ha='left', va='center', fontsize=7.5, color=INK)
         for x, y in list(zip(xs, ys)):
@@ -338,7 +335,7 @@ def f5_random_aim():
         ax.set_xticks(range(6))
         ax.set_xticklabels(labels)
         ax.set_xlim(-0.5, 5.5)
-        ax.set_xlabel('the four-hour block the discount was aimed at')
+        ax.set_xlabel('block on which the discount is centred')
         ax.set_title(title)
         ax.yaxis.grid(True, zorder=0)
         print(f'  F5 check {title}: ' + ', '.join(f'b{b} {np.mean(per_block[b]):.4f} '
@@ -346,7 +343,6 @@ def f5_random_aim():
               f'(n={len(_rv)}, min {rmin:.4f}, max {rmax:.4f})')
     axes[0].set_ylabel('normalised decision regret\n(lower is better)')
     axes[0].legend(loc='center left', fontsize=8)
-    fig.suptitle('Aiming the discount at each block of the day', y=1.02)
     save(fig, 'F5_random_aim')
 
 
@@ -460,9 +456,6 @@ def f7_output_range():
                       + (f'; {out:.1f}% lie beyond the axis' if out >= 0.05 else ''))
         print(f'  F7 check {title}: narrow {nar:.2f}%  wide {wid:.2f}%')
     axes[0].set_ylabel('half-hours')
-    fig.suptitle(f'How much of the deployment-era price distribution each output '
-                 f'range can express (narrow \\${_half_up(lo)} to \\${_half_up(hi)}; '
-                 f'wide \u2212\\${abs(wl):.0f} to \\${wh:.0f})', y=1.03, fontsize=9.5)
     save(fig, 'F7_output_range')
 
 
@@ -476,7 +469,7 @@ def _midday_p5(path):
 
 
 def f8_generator_stall():
-    """The published method's generator never produces the deployment regime.
+    """The midday 5th-percentile price of the 3D-Learning generator, per round.
 
     One line per training run: the generator's midday 5th-percentile price
     per round, against the real values for the training years and both eras.
@@ -506,7 +499,6 @@ def f8_generator_stall():
     ax.axhline(0, color=MUTED, lw=0.6, zorder=1)
     ax.set_xlabel('training round')
     ax.set_ylabel('midday 5th-percentile price (\\$/MWh)')
-    ax.set_title("The generator's cheapest midday prices never move")
     ax.set_ylim(-80, 38)
     ax.yaxis.grid(True, zorder=0)
     ax.legend(loc='center right', fontsize=8)
@@ -534,7 +526,7 @@ def f9_decomposition():
         m72 = np.mean([v for _, v in load_arm('a72_nogenwide', era)])
         tot = m71 - m72
         ax.barh(i, m75 - m72, left=m72, height=0.5, color=C1, zorder=3,
-                label='the trend-aimed discount' if i == 0 else None)
+                label='the trend-rule discount' if i == 0 else None)
         ax.barh(i, m71 - m75, left=m75, height=0.5, color=C3, hatch='///',
                 edgecolor='white', lw=0, zorder=3,
                 label='real training days instead of generated ones' if i == 0 else None)
@@ -554,24 +546,25 @@ def f9_decomposition():
     ax.set_ylim(-0.4, 1.75)
     ax.invert_yaxis()
     ax.set_xlabel('normalised decision regret (lower is better), wide output range')
-    ax.set_title('Where the improvement over 3D-Learning comes from', pad=8)
     ax.xaxis.grid(True, zorder=0)
     ax.legend(loc='lower center', bbox_to_anchor=(0.5, -0.42), ncol=2, fontsize=8)
     save(fig, 'F9_decomposition')
 
 
 def f10_narrow_ladder():
-    """The narrow-range controls as a ladder: what each ingredient buys.
+    """The narrow-range controls in one ordered bar chart.
 
-    Bars with seeds as dots, one order for both panels. Every rung runs 30
-    rounds, so the ladder is dose-matched; trend-aim here is the 30-round,
-    generator-off run (a46), not the 8-round one. Source: scored files.
+    Bars with seeds as dots, one order for both panels. Every rung has a
+    30-round cap, but early stopping keeps rounds 1-14, so the rungs are not
+    dose-matched, and most steps change several switches at once (see
+    ARMS.md). Trend-aim here is the 30-round, generator-off run (a46), not the
+    8-round one. Source: scored files.
     """
     rungs = [('a1_stall', '3D-Learning'),
              ('a23_zerodose_r2', 'real days, no discount'),
              ('a25_recency_r2', 'real days 2019-2020 only, no discount'),
              ('a77_obsdepth', 'real days, observed \\$24 discount'),
-             ('a19_discwidth', 'real days, divergence-aimed \\$120 discount'),
+             ('a19_discwidth', 'real days, \\$120 discount at the divergence block'),
              ('a46_nogen30', 'trend-aim')]
     eras = [('oodtest_2023_2025_renewables', 'renewables 2023-2025'),
             ('oodtest_2021_2022_gas', 'gas 2021-2022')]
@@ -596,7 +589,6 @@ def f10_narrow_ladder():
         print(f'  F10 check {title}: ' + ', '.join(f'{a} {m:.4f}' for (a, _), m in
                                                    zip(rungs, means)))
     axes[0].invert_yaxis()
-    fig.suptitle('What each ingredient buys', y=1.03)
     save(fig, 'F10_ladder')
 
 

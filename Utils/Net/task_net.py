@@ -23,6 +23,42 @@ class ConstantMeanPredictor(nn.Module):
         return self.val.unsqueeze(0).expand(x.shape[0], -1)
 
 
+class PersistencePredictor(nn.Module):
+    """Naive baseline: forecast = the previous 48 half-hours of price, unchanged.
+
+    The scorer feeds a 48-slot input window, so slot j of the input sits at the
+    same clock time as slot j of the target, one day earlier. Optional fixed dip:
+    subtract a raised-cosine bell of dip_dollars at dip_center_h (half-width
+    dip_halfwidth_h), placed by the clock hour read from the sin_h/cos_h input
+    columns, the same rule as _instr_head_augment_price. dip_dollars=0 is plain
+    persistence. Not trained; never used inside a training loop.
+    """
+
+    def __init__(self, price_lo: float, price_hi: float, dip_dollars: float = 0.0,
+                 dip_center_h: float = 14.0, dip_halfwidth_h: float = 2.0,
+                 sin_h_col: int = 2, cos_h_col: int = 3):
+        super().__init__()
+        self.price_span = float(price_hi) - float(price_lo)
+        assert self.price_span > 0, 'price bounds must satisfy hi > lo'
+        self.dip_dollars = float(dip_dollars)
+        self.dip_center_h = float(dip_center_h) % 24.0
+        self.dip_halfwidth_h = float(dip_halfwidth_h)
+        self.sin_h_col, self.cos_h_col = int(sin_h_col), int(cos_h_col)
+
+    def forward(self, x):
+        out = x[..., 0].clone()
+        if self.dip_dollars == 0.0:
+            return out
+        assert x.shape[-1] > self.cos_h_col, 'dip needs the sin_h/cos_h input columns'
+        ang = torch.atan2(x[..., self.sin_h_col], x[..., self.cos_h_col])
+        hour = (ang % (2 * math.pi)) / (2 * math.pi) * 24.0
+        d = torch.abs(hour - self.dip_center_h)
+        d = torch.minimum(d, 24.0 - d)
+        hw = max(self.dip_halfwidth_h, 1e-6)
+        bell = torch.where(d < hw, 0.5 + 0.5 * torch.cos(math.pi * d / hw),
+                           torch.zeros_like(hour))
+        return out - self.dip_dollars * bell / self.price_span
+
 class DeepLSTM(nn.Module):
     def __init__(self, input_size=1, hidden_sizes=[128, 64], output_size=1, dropout=0.0,
                  avg_delta_init=None, zero_init_fc2=True,

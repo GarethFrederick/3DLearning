@@ -53,15 +53,17 @@ Victorian prices this fails. The generator cannot reach the true shift.
 This method removes the generator. It trains the forecaster on real past price
 days. It also makes a copy of each day and makes one part of that day cheaper.
 It reads two things from the 2015-2020 data: which hours to change, and how much
-cheaper to make them. No future data touches any choice.
+cheaper to make them. Those two values use no data after 2020. Two other choices
+do: the horizon year is the midpoint of the 2023-2025 test period, and the saved
+model is chosen on validation months from 2021-2025 (step 6).
 
 ## 3. Inputs
 
 | input | value | source |
 |---|---|---|
 | price data | AEMO Victoria, half-hourly, 2015-2020, 105,215 rows | `Data/AEMO_VIC1_train_2015_2020.csv` |
-| forecaster inputs | 8 features, 48 half-hours in, 48 half-hours out | `Utils/datasets.py:94-101`, `main_energy_mv.py:98` |
-| stored window length | 192 half-hours (4 days) | `main_energy_mv.py:109` |
+| forecaster inputs | 8 features, 48 half-hours in, 48 half-hours out | `Utils/datasets.py:94-99`, `main_energy_mv.py:86` |
+| stored window length | 192 half-hours (4 days) | `main_energy_mv.py:85` |
 | schedule task | ICON `sub100_s0`, 100 jobs, 2 machines, 3 resources, T=288 | the submit line |
 | horizon year | 2024 | `INSTR_HEAD_DEPTH_HORIZON` |
 
@@ -81,7 +83,7 @@ Use only the 2015-2020 data.
 4. Select the block with the most negative slope. That block has the fastest fall.
 
 Source: `_trend_aim`,
-[ddd_learning.py:2290](Utils/Algos/ddd_learning.py#L2290).
+[ddd/trend.py:18](Utils/Algos/ddd/trend.py#L18).
 
 Result on a34 seed 1:
 
@@ -110,7 +112,7 @@ Use only the 2015-2020 data. Use the block from step 1.
    depth.
 
 Source: `_trend_depth`,
-[ddd_learning.py:2339](Utils/Algos/ddd_learning.py#L2339).
+[ddd/trend.py:87](Utils/Algos/ddd/trend.py#L87).
 
 Result on a34 seed 1:
 
@@ -138,9 +140,15 @@ searches for its half-width.
 3. Score the result by decision divergence.
 4. Keep the width with the highest score.
 
-Source: [ddd_learning.py:3464-3485](Utils/Algos/ddd_learning.py#L3464). The score
+Source: [ddd/instructor.py:176-197](Utils/Algos/ddd/instructor.py#L176). The score
 function is `_score` at
-[ddd_learning.py:3173](Utils/Algos/ddd_learning.py#L3173).
+[ddd/instructor.py:53](Utils/Algos/ddd/instructor.py#L53).
+
+The search places its trial bell by position in the window, at hour
+`(t mod 48)/2`, and the scored windows start at any half-hour. So during the
+search the trial bell usually sits at another clock hour than 14h. The edit in
+step 4 uses the true clock hour. The aim is therefore correct; only the choice of
+width is affected.
 
 Result on a34 seed 1:
 
@@ -168,7 +176,7 @@ Do these steps for each sequence in a batch.
 6. Subtract `amplitude × bell` from the price channel. Do this in normalised
    space.
 
-Source: `_instr_head_augment_price`, [ml.py:178](Utils/Algos/ml.py#L178).
+Source: `_instr_head_augment_price`, [ml.py:130](Utils/Algos/ml.py#L130).
 
 The mean push is `depth/4`, which is about $53. Two causes make it smaller than
 the depth. The amplitude is a uniform draw below the depth. Half of the sequences
@@ -184,10 +192,13 @@ Do these steps in each round.
 1. Take a continuous slice of real 2015-2020 days as the base data. The switch
    `HEAD_ROWS_MULT=5` makes this 5 batches for each inner epoch. Source:
    `_real_base_sample`,
-   [ddd_learning.py:2549](Utils/Algos/ddd_learning.py#L2549).
+   [ddd/realdata.py:24](Utils/Algos/ddd/realdata.py#L24).
 2. Score the real price windows by decision divergence. Keep the best 20%. On a34
    this is 13 windows in each round. The buffer grows: 13, then 26, then 39.
-3. Build the loader from the base days plus a 30% replay from that buffer.
+3. Build the loader from the base days only. The buffer is not replayed into the
+   forecaster's data when `INSTR_HEAD_AUG=1`
+   ([ddd_learning.py:876-883](Utils/Algos/ddd_learning.py#L876)); the kept
+   windows feed only the width search of step 3.
 4. Run 5 inner epochs. Apply the edit of step 4 to every batch.
 
 The dose is 5 batches × 5 inner epochs × 8 rounds = **200 optimiser steps**. The
@@ -207,11 +218,11 @@ A round is eligible only if its in-distribution regret stays at or below 1.2
 times the best in-distribution regret up to that round. Of the eligible rounds,
 keep the round with the lowest worst shifted-year regret.
 
-Source: [ddd_learning.py:1530-1540](Utils/Algos/ddd_learning.py#L1530).
+Source: [ddd_learning.py:1008-1019](Utils/Algos/ddd_learning.py#L1008).
 
 Stop the run early if four rounds give no improvement. The patience is half the
 round count, with a maximum of 25
-([ddd_learning.py:72](Utils/Algos/ddd_learning.py#L72)).
+([ddd_learning.py:77](Utils/Algos/ddd_learning.py#L77)).
 
 ## 5. Pseudocode
 
@@ -235,7 +246,7 @@ for round = 1 .. 8:
     train the diffusion parts            # the output is unused, see section 6
     kept    = best 20% of real windows by decision divergence
     buffer += kept
-    data    = real_days_sample() + 30% replay from buffer
+    data    = real_days_sample()             # buffer not replayed (INSTR_HEAD_AUG=1)
     for inner_epoch = 1 .. 5:
         for each batch in data:              # 5 batches
             for each sequence:

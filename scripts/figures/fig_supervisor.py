@@ -203,17 +203,16 @@ def box_fig(cfgs, name, title):
         ax.set_title(et)
         ax.xaxis.grid(True, zorder=0)
         ax.set_xlabel('normalised decision regret (lower is better)')
-    fig.suptitle(title, y=1.02)
     fig.tight_layout()
     save(fig, name)
 
 
 box_fig([('3D-Learning', 'a71_a1wide'), ('3D-Learning,\nwrapper off', 'a73_vanilla3dl'),
-         ('Zero discount', 'a75_wzerodose'), ('Random aim', 'a74_randomaim'),
+         ('Zero discount', 'a75_wzerodose'), ('Random block', 'a74_randomaim'),
          ('Real-window reference', 'a79_realref'), ('Trend-aim', 'a72_nogenwide')],
         'F13_regret_box', 'Regret across seeds, wide output range')
 box_fig([('3D-Learning', 'a1_stall'), ('No discount,\nall years', 'a23_zerodose_r2'),
-         ('No discount,\n2019-2020', 'a25_recency_r2'), ('Divergence aim', 'a19_discwidth'),
+         ('No discount,\n2019-2020', 'a25_recency_r2'), ('Divergence block', 'a19_discwidth'),
          ('Trend-aim, gen on,\n8 rounds', 'a34_honestdose'), ('Trend-aim, gen on,\nWDRO start', 'a59_drospo'),
          ('Trend-aim,\ngenerator on', 'a44_long30'),
          ('Trend-aim, observed \\$24 depth', 'a77_obsdepth'), ('Trend-aim', 'a46_nogen30')],
@@ -263,11 +262,10 @@ ax.boxplot(groups, positions=pos, widths=0.5, showfliers=True,
 ax.axhline(0, color=C2, lw=1.0, ls='--')
 ax.annotate(f'−\\${abs(outlier[1]):,.0f}k\n{outlier[2]}', (outlier[0], outlier[1]),
             textcoords='offset points', xytext=(10, 0), fontsize=7.5, color=INK2, va='center')
-ax.text(2.5, -25, 'no difference', color=C2, fontsize=8, va='top', ha='center')
+ax.text(2.5, -25, 'zero difference', color=C2, fontsize=8, va='top', ha='center')
 ax.set_xticks(pos)
 ax.set_xticklabels(labels)
-ax.set_ylabel('3D-Learning regret minus trend-aim\nregret (thousand \\$ per block)')
-ax.set_title('Per-block advantage of trend-aim (above zero: trend-aim cheaper)')
+ax.set_ylabel('3D-Learning regret minus trend-aim\nregret (thousand \\$ per four-day test block)')
 ax.yaxis.grid(True, zorder=0)
 save(fig, 'F15_block_advantage_box')
 
@@ -343,7 +341,6 @@ ax.axvline(2020.5, color=MUTED, lw=0.8, ls=':')
 ax.text(2020.6, ax.get_ylim()[1], 'training ends', color=INK2, fontsize=8, va='top')
 ax.set_xlabel('year')
 ax.set_ylabel('12-16 h 5th-percentile price ($/MWh)')
-ax.set_title('Extending the 12-16 h floor to 2024')
 ax.legend(loc='lower left', fontsize=8)
 ax.yaxis.grid(True, zorder=0)
 save(fig, 'F16_depth_fit')

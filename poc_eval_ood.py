@@ -221,6 +221,37 @@ def find_selected_epoch(arm, seed, available_epochs):
     return snapped, src
 
 
+def find_indist_epoch(arm, seed, available_epochs):
+    """Best SAVED epoch by the in-distribution 'Val Norm Regret' that each round
+    prints (validation split inside the 2015-2020 file). Ties go to the earlier
+    epoch. No fallback: a missing log or line raises, because a silent default
+    would score a checkpoint no rule chose. Returns (epoch, source_str)."""
+    suffix = f'_{RUN_PREFIX}_{arm}_s{seed}'
+    _logs = (glob.glob(f'{ROOT}/slurm-*.out')
+             + glob.glob(f'{ROOT}/results/logs/train/slurm-*.out'))
+    for log in sorted(_logs, key=os.path.getmtime, reverse=True):
+        try:
+            with open(log, 'r', errors='ignore') as fh:
+                txt = fh.read()
+        except OSError:
+            continue
+        if not re.search(rf'(?:MV_RUN_)?SUFFIX={re.escape(suffix)}(?![A-Za-z0-9_])', txt):
+            continue
+        rows = re.findall(r'\| Outer epoch (\d+) \| Val SPO\+ Loss = \S+\s+'
+                          r'Val Norm Regret = ([0-9.eE+-]+)', txt)
+        scores = {}
+        for ep, v in rows:
+            scores[int(ep)] = float(v)
+        cand = [e for e in available_epochs if e in scores]
+        if not cand:
+            raise RuntimeError(f'{arm} s{seed}: no saved epoch has an in-dist '
+                               f'score in {os.path.basename(log)}')
+        best = min(cand, key=lambda e: (scores[e], e))
+        return best, (f'indist_log:{os.path.basename(log)} '
+                      f'val_norm_regret={scores[best]:.6f} of {len(scores)} rounds')
+    raise RuntimeError(f'{arm} s{seed}: no training log with SUFFIX={suffix}')
+
+
 def build_task():
     """Native-T=288 MIP task on ICON_INSTANCE (ICON_AGG=0), with MIP_TL override."""
     task = Energy_Scheduling.from_icon_instance(
@@ -334,6 +365,11 @@ def main():
             kinds = {'selected': sel_ep}
             if fixed_ep != sel_ep:
                 kinds['fixed'] = fixed_ep
+            # POC_INDIST=1 scores ONLY the in-distribution choice (kind 'indist').
+            # Unset leaves the selected/fixed path above unchanged.
+            if os.environ.get('POC_INDIST', '0') == '1':
+                sel_ep, sel_src = find_indist_epoch(arm, seed, eps)
+                kinds = {'indist': sel_ep}
             print(f"\n########## {arm} s{seed} | saved epochs={eps} | "
                   f"selected=ep{sel_ep} ({sel_src}) | fixed=ep{fixed_ep} ##########",
                   flush=True)

@@ -80,11 +80,10 @@ for yy, (k, _) in zip(y, ORDER):
     ax.text(gas[k] + 0.4, yy - h / 2, f'{gas[k]:.1f}%', va='center', fontsize=7.5, color=INK2)
 ax.set_yticks(y)
 ax.set_yticklabels([lab for _, lab in ORDER])
-ax.set_xlabel('share of forecast half-hours held at the output limit (%)')
+ax.set_xlabel('share of forecast half-hours clipped to a bound of the output range (%)')
 ax.set_xlim(0, 38)
 ax.xaxis.grid(True, zorder=0)
 ax.legend(loc='lower right', fontsize=8)
-ax.set_title('Forecasts stuck at the output limit, seed 1', loc='left')
 save(fig, 'F17_clamp_share')
 
 # F19
@@ -127,7 +126,6 @@ a1.text(x.iloc[2], a1.get_ylim()[1], 'history (48 half-hours)', color=INK2, font
 a1.text(x.iloc[50], a1.get_ylim()[1], 'forecast horizon (48 half-hours)', color=INK2, fontsize=8, va='top')
 a1.set_ylabel('price ($/MWh)')
 a1.legend(loc='lower left', bbox_to_anchor=(0.0, 1.0), ncol=2, fontsize=8)
-a1.set_title(f'One training window, {day.strftime("%-d %B %Y")}, before and after the edit', loc='left', pad=22)
 a2.fill_between(x, 0, bell, color=C2, alpha=0.25, lw=0)
 a2.plot(x, bell, color=C2, lw=1.6)
 a2.set_ylim(0, 1.1)

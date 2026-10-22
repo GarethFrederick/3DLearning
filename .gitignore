@@ -5,9 +5,9 @@ __pycache__/
 
 # Model checkpoints, generated data, run outputs and the second domain live
 # outside the repo. The scripts create results/ when they run.
-Utils/Models/
-Utils/Gen_Data/
-Utils/Results/
+Utils/Models
+Utils/Gen_Data
+Utils/Results
 gate_out/
 results/
 second_domain/

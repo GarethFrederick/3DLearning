@@ -271,7 +271,7 @@ if STAGE in ('3dl_mv', 'cond_mv', 'all'):
               f"{_ml_warm or 'COLD (explicit)'}", flush=True)
 
         # VAL_OOD_REGRET=1: pick the epoch on worst-case oodval regret, with the
-        # in-dist constraint OOD_VAL_EPSILON, as in ml.py. oodtest stays held
+        # in-dist constraint OOD_VAL_EPSILON (ml.py applies no such constraint). oodtest stays held
         # out. Default: in-dist selection.
         _val_regret_loaders = None
         if os.environ.get('VAL_OOD_REGRET') == '1':

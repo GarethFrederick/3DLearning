@@ -58,8 +58,6 @@ ax.axvline(230, color=MUTED, lw=0.8, ls=':')
 ax.text(245, 1.06, 'limit used for\nthe reported tables', fontsize=7.5, color=INK2, va='center')
 ax.set_xlabel('Gurobi work limit (work units, log scale)')
 ax.set_ylabel('normalised decision regret\n(lower is better)')
-ax.set_title('Regret as the solver gets more effort (seed 1, 128 renewables windows)',
-             loc='left', fontsize=9.5)
 ax.yaxis.grid(True, zorder=0)
 for ext in ('pdf', 'png'):
     fig.savefig(f'{ROOT}/results/thesis/figures/F18_worklimit.{ext}')

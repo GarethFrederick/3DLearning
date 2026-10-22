@@ -113,8 +113,9 @@ export ICON_AGG="${ICON_AGG:-1}"
 export MV_SEED="${MV_SEED:-42}"
 # VAL_OOD_REGRET / OOD_VAL_EPSILON: pick the epoch by constrained worst-case
 # regret over both validation regimes (2021-22 gas, 2023-25 renewables), with the
-# test windows held out. Every baseline uses the same rule; do not scope the
-# selector to one regime, or the arms stop being comparable.
+# test windows held out. Every arm run through this file uses the same rule; the
+# classical baselines (main_energy.py) select on 2015-2020 validation loss instead.
+# Do not scope the selector to one regime, or the arms stop being comparable.
 export VAL_OOD_REGRET="${VAL_OOD_REGRET:-1}"
 export OOD_VAL_EPSILON="${OOD_VAL_EPSILON:-0.2}"
 # VAL_OOD_REGRET_MIP=1 selects epochs by native MIP; default off. A MIP solve on
